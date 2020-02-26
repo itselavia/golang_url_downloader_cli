@@ -2,12 +2,24 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 )
 
 func main() {
 
-	res, err := http.Head("https://www.bluedata.com/wp-content/uploads/dlm_uploads/2019/04/BlueData-EPIC-Software-Architecture-technical-white-paper.pdf")
+	if len(os.Args) > 3 || len(os.Args) < 2 {
+		log.Fatalf("Usage: ./file_downloader URL num_threads")
+	}
+
+	url := os.Args[1]
+	numThreads := os.Args[2]
+
+	fmt.Println(url)
+	fmt.Println(numThreads)
+
+	res, err := http.Head(url)
 	if err != nil {
 		panic(err)
 	}
