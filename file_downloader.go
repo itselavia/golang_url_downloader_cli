@@ -2,10 +2,12 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -20,8 +22,10 @@ func main() {
 	url := os.Args[1]
 	numThreads, _ := strconv.Atoi(os.Args[2])
 
-	fmt.Println(url)
-	fmt.Println(numThreads)
+	outputFile, err := os.Create(url[strings.LastIndex(url, "/")+1:])
+	if err != nil {
+		panic(err)
+	}
 
 	res, err := http.Head(url)
 	if err != nil {
@@ -30,10 +34,7 @@ func main() {
 
 	contentLength := int(res.ContentLength)
 
-	fmt.Println(contentLength)
-
 	bytesPerThread := contentLength / numThreads
-	fmt.Println(bytesPerThread)
 
 	startByte := 0
 	endByte := bytesPerThread
@@ -41,7 +42,7 @@ func main() {
 	for i := 0; i < numThreads; i++ {
 
 		wg.Add(1)
-		go downloadPart(url, startByte, endByte, &wg)
+		go downloadPart(url, startByte, endByte, outputFile, &wg)
 
 		startByte = endByte + 1
 		endByte = startByte + bytesPerThread
@@ -55,12 +56,9 @@ func main() {
 
 }
 
-func downloadPart(url string, startByte int, endByte int, wg *sync.WaitGroup) {
+func downloadPart(url string, startByte int, endByte int, outputFile *os.File, wg *sync.WaitGroup) {
 
 	defer wg.Done()
-
-	fmt.Println("start: ", startByte)
-	fmt.Println("end: ", endByte)
 
 	client := new(http.Client)
 	req, err := http.NewRequest("GET", url, nil)
@@ -73,6 +71,8 @@ func downloadPart(url string, startByte int, endByte int, wg *sync.WaitGroup) {
 		fmt.Println(err)
 	}
 
-	fmt.Println(resp.ContentLength)
+	partBytes, err := ioutil.ReadAll(resp.Body)
+
+	outputFile.WriteAt(partBytes, int64(startByte))
 
 }
